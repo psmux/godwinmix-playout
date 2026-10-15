@@ -31,6 +31,10 @@ impl GstAudio {
         let channels = track.channels.clamp(1, 2) as i32;
         src.set_caps(Some(&gst::Caps::builder("audio/x-opus").field("channel-mapping-family", 0i32).field("channels", channels).field("rate", 48_000i32).build()));
         pipeline.set_state(gst::State::Playing).map_err(|e| format!("the Opus decoder would not start: {e}"))?;
+        // Wait for PLAYING here, on the item's own thread. Until then the
+        // sink holds its first buffer and gives nothing, and that was a second
+        // and more of silence at the start of every Opus item.
+        let _ = pipeline.state(gst::ClockTime::from_seconds(5));
         let me = GstAudio { pipeline, src, sink, channels: channels as usize };
         if let Some(head) = track.config.clone() {
             // In band headers: opusdec reads OpusHead from the first buffer.
@@ -40,12 +44,26 @@ impl GstAudio {
         Ok(me)
     }
 
-    pub fn decode(&mut self, data: Vec<u8>, out: &mut Vec<f32>) -> Option<u32> {
-        let _ = self.src.push_buffer(gst::Buffer::from_mut_slice(data));
-        while let Some(sample) = self.sink.try_pull_sample(gst::ClockTime::ZERO) {
+    /// opusdec runs on appsrc's own thread, so what comes out now may be
+    /// from packets pushed earlier: the time answered is the first sample's
+    /// own, carried through the decoder, not this packet's.
+    pub fn decode(&mut self, data: Vec<u8>, pts: i64, out: &mut Vec<f32>) -> Option<(u32, i64)> {
+        let mut buffer = gst::Buffer::from_mut_slice(data);
+        if let Some(b) = buffer.get_mut() {
+            b.set_pts(gst::ClockTime::from_nseconds(pts.max(0) as u64));
+        }
+        let _ = self.src.push_buffer(buffer);
+        let mut first = None;
+        // Each packet decodes in well under a millisecond on appsrc's thread;
+        // waiting a little for it keeps the sound in step with the demuxer,
+        // which may next block on the picture for a while.
+        let mut wait = gst::ClockTime::from_mseconds(50);
+        while let Some(sample) = self.sink.try_pull_sample(wait) {
+            wait = gst::ClockTime::ZERO;
+            first = first.or_else(|| sample.buffer().and_then(|b| b.pts()).map(|t| t.nseconds() as i64));
             self.append(&sample, out);
         }
-        Some(48_000)
+        first.map(|t| (48_000, t))
     }
 
     pub fn finish(&mut self, out: &mut Vec<f32>) {

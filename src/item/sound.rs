@@ -1,7 +1,7 @@
 //! Sound from inside a video file: decoded, resampled, and queued with its
 //! time worked out from the first packet and the count since.
 
-use super::audio_queue::{frames_to_ns, AudioQueue};
+use super::audio_queue::{ns_to_frames, AudioQueue};
 use crate::media::audio::AudioDecoder;
 use crate::media::resample::Resampler;
 
@@ -24,8 +24,11 @@ impl Sound {
 
     pub fn packet(&mut self, pts: i64, data: Vec<u8>, queue: &AudioQueue) {
         self.raw.clear();
-        let Some(rate) = self.decoder.decode(data, &mut self.raw) else { return };
-        self.resample(pts, rate, queue);
+        let Some((rate, at)) = self.decoder.decode(data, pts, &mut self.raw) else { return };
+        if self.raw.is_empty() {
+            return;
+        }
+        self.resample(at, rate, queue);
     }
 
     fn resample(&mut self, pts: i64, rate: u32, queue: &AudioQueue) {
@@ -43,7 +46,7 @@ impl Sound {
         if self.out.is_empty() {
             return;
         }
-        queue.push(base + frames_to_ns(self.produced) as i64, &self.out);
+        queue.push_at(ns_to_frames(base) + self.produced as i64, &self.out);
         self.produced += (self.out.len() / 2) as u64;
     }
 

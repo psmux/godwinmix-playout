@@ -36,12 +36,14 @@ impl AudioDecoder {
         Ok(AudioDecoder::Rust { decoder, buffer: None })
     }
 
-    /// Decode one packet, appending stereo samples to `out`. Answers the
-    /// rate they are at. A packet that does not decode is skipped: one bad
-    /// packet is a 20 ms click, not a reason to stop.
-    pub fn decode(&mut self, data: Vec<u8>, out: &mut Vec<f32>) -> Option<u32> {
+    /// Decode one packet at `pts`, appending stereo samples to `out`.
+    /// Answers the rate they are at and the time of the first of them, which
+    /// for a decoder that runs behind its input is an earlier packet's time.
+    /// A packet that does not decode is skipped: one bad packet is a 20 ms
+    /// click, not a reason to stop.
+    pub fn decode(&mut self, data: Vec<u8>, pts: i64, out: &mut Vec<f32>) -> Option<(u32, i64)> {
         match self {
-            AudioDecoder::Gst(g) => g.decode(data, out),
+            AudioDecoder::Gst(g) => g.decode(data, pts, out),
             AudioDecoder::Rust { decoder, buffer } => {
                 let packet = Packet::new_from_boxed_slice(0, 0, 0, data.into_boxed_slice());
                 let decoded = decoder.decode(&packet).ok()?;
@@ -53,7 +55,7 @@ impl AudioDecoder {
                 };
                 buf.copy_interleaved_ref(decoded);
                 to_stereo(buf.samples(), &spec, out);
-                Some(spec.rate)
+                Some((spec.rate, pts))
             }
         }
     }

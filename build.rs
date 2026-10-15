@@ -10,7 +10,6 @@ const DELAYED: &[&str] = &[
     "glib-2.0-0.dll",
     "gobject-2.0-0.dll",
     "gstreamer-1.0-0.dll",
-    "gstbase-1.0-0.dll",
     "gstapp-1.0-0.dll",
     "gstvideo-1.0-0.dll",
 ];

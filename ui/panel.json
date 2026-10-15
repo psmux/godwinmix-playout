@@ -1,0 +1,7 @@
+{
+  "id": "playout/panel",
+  "title": "Playout",
+  "slots": ["main", "sidebar"],
+  "tier": "trusted",
+  "height": 640
+}

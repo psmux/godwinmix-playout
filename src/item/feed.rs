@@ -3,7 +3,7 @@
 //! until the decoder or the queue is full, and then waits on them, which is
 //! all the pacing it needs.
 
-use super::audio_queue::frames_to_ns;
+use super::audio_queue::ns_to_frames;
 use super::convert::Converter;
 use super::sound::Sound;
 use super::Shared;
@@ -112,12 +112,12 @@ fn audio_inner(shared: &Shared, path: &std::path::Path) -> Res<()> {
         resampler.push(&raw, &mut out);
         let b = *base.get_or_insert(pts as i64);
         if !out.is_empty() {
-            shared.audio.push(b + frames_to_ns(produced) as i64, &out);
+            shared.audio.push_at(ns_to_frames(b) + produced as i64, &out);
             produced += (out.len() / 2) as u64;
         }
     }
     out.clear();
     resampler.flush(&mut out);
-    shared.audio.push(base.unwrap_or(0) + frames_to_ns(produced) as i64, &out);
+    shared.audio.push_at(ns_to_frames(base.unwrap_or(0)) + produced as i64, &out);
     Ok(())
 }

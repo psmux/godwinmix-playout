@@ -38,7 +38,7 @@ pub fn frames_to_ns(frames: u64) -> u64 {
     frames * 1_000_000_000 / RATE as u64
 }
 
-fn ns_to_frames(ns: i64) -> i64 {
+pub fn ns_to_frames(ns: i64) -> i64 {
     (ns as i128 * RATE as i128).div_euclid(1_000_000_000) as i64
 }
 
@@ -49,9 +49,16 @@ impl AudioQueue {
         AudioQueue { inner: Mutex::new(inner), room: Condvar::new() }
     }
 
-    /// Queue stereo `samples` starting at `pts_ns`. Waits while the queue is
-    /// full, until there is room or the item is closed.
+    /// Queue stereo `samples` starting at `pts_ns`.
     pub fn push(&self, pts_ns: i64, samples: &[f32]) {
+        self.push_at(ns_to_frames(pts_ns), samples);
+    }
+
+    /// Queue stereo `samples` starting at frame `at` of 48 kHz. A producer
+    /// that counts its own frames uses this, so a time rounded to the
+    /// nanosecond never moves a chunk by one sample. Waits while the queue
+    /// is full, until there is room or the item is closed.
+    pub fn push_at(&self, at: i64, samples: &[f32]) {
         let mut q = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         while q.samples.len() / 2 >= CAP && !q.closed {
             q = self.room.wait(q).unwrap_or_else(|e| e.into_inner());
@@ -59,7 +66,6 @@ impl AudioQueue {
         if q.closed {
             return;
         }
-        let at = ns_to_frames(pts_ns);
         let gap = at - q.end();
         let mut from = 0usize;
         if gap > 0 {
