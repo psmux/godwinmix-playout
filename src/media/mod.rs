@@ -21,6 +21,7 @@ pub mod picture;
 pub mod probe;
 pub mod resample;
 pub mod still;
+pub mod video_codecs;
 pub mod video_gst;
 
 pub type Res<T> = Result<T, String>;

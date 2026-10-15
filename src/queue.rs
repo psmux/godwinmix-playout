@@ -1,7 +1,7 @@
 //! The order things play in. No media here, only ids, so every rule about
 //! what comes next is tested without a file or a clock.
 
-use crate::settings::{Item, Repeat};
+use crate::settings::Repeat;
 use std::collections::HashSet;
 
 /// What `after` decided.
@@ -33,42 +33,6 @@ pub struct Queue {
 impl Queue {
     pub fn new(seed: u64) -> Queue {
         Queue { order: Vec::new(), next_pass: None, pos: None, cued: None, failed: HashSet::new(), shuffle: false, rng: seed | 1 }
-    }
-
-    /// The list or the shuffle changed. The current item keeps its place.
-    pub fn update(&mut self, items: &[Item], shuffle: bool, current: Option<&str>) {
-        let ids: Vec<String> = items.iter().map(|i| i.id.clone()).collect();
-        let was_shuffled = self.shuffle;
-        self.shuffle = shuffle;
-        self.next_pass = None;
-        self.failed.retain(|id| ids.contains(id));
-        if self.cued.as_ref().is_some_and(|c| !ids.contains(c)) {
-            self.cued = None;
-        }
-        self.order = if !shuffle {
-            ids
-        } else if was_shuffled {
-            // Keep the shuffle that is playing, drop what went, and put what
-            // arrived somewhere after the current item.
-            let mut kept: Vec<String> = self.order.iter().filter(|id| ids.contains(id)).cloned().collect();
-            let arrived: Vec<String> = ids.iter().filter(|id| !kept.contains(id)).cloned().collect();
-            for id in arrived {
-                let after = current.and_then(|c| kept.iter().position(|k| k == c)).map_or(0, |p| p + 1);
-                let at = after + (self.next_random() as usize) % (kept.len() - after + 1);
-                kept.insert(at, id);
-            }
-            kept
-        } else {
-            self.shuffled(ids, current)
-        };
-        if let Some(c) = current {
-            if let Some(p) = self.order.iter().position(|id| id == c) {
-                self.pos = Some(p);
-            }
-        }
-        if let Some(p) = self.pos {
-            self.pos = Some(p.min(self.order.len()));
-        }
     }
 
     /// What plays after `current`, without moving anything.
@@ -160,28 +124,12 @@ impl Queue {
     fn playable(&self, id: &str) -> bool {
         !self.failed.contains(id) && self.order.iter().any(|o| o == id)
     }
-
-    /// A Fisher-Yates shuffle, with `first` kept at the front.
-    fn shuffled(&mut self, mut ids: Vec<String>, first: Option<&str>) -> Vec<String> {
-        for i in (1..ids.len()).rev() {
-            let j = (self.next_random() % (i as u64 + 1)) as usize;
-            ids.swap(i, j);
-        }
-        if let Some(f) = first.and_then(|f| ids.iter().position(|id| id == f)) {
-            let id = ids.remove(f);
-            ids.insert(0, id);
-        }
-        ids
-    }
-
-    fn next_random(&mut self) -> u64 {
-        // xorshift64: plenty for an order nobody will audit.
-        self.rng ^= self.rng << 13;
-        self.rng ^= self.rng >> 7;
-        self.rng ^= self.rng << 17;
-        self.rng
-    }
 }
+
+#[path = "queue_shuffle.rs"]
+mod shuffle;
+#[path = "queue_update.rs"]
+mod update;
 
 #[cfg(test)]
 #[path = "queue_tests.rs"]

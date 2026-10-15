@@ -8,60 +8,23 @@
 
 pub mod audio_queue;
 mod convert;
+mod ends;
 mod feed;
+mod open;
+mod shared;
 mod sound;
 pub mod status;
 
-use crate::media::kind::{sniff, Container};
-use crate::media::video_gst::VideoDecoder;
-use crate::settings::{Fit, Item, Settings};
+use crate::settings::{Item, Settings};
 use audio_queue::AudioQueue;
 use godwinmix_sdk::wire::Canvas;
 use status::Status;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender, TryRecvError};
+use std::sync::atomic::AtomicBool;
+use std::sync::mpsc::{sync_channel, Receiver, TryRecvError};
 use std::sync::{Arc, Mutex};
 
-/// A picture at canvas size, ready to send.
-#[derive(Clone)]
-pub struct Frame {
-    pub pts: u64,
-    pub data: Arc<Vec<u8>>,
-}
-
-/// How early a frame may be and still count as due. Matroska keeps times to
-/// the millisecond, so a 30 fps frame due at 66.667 ms is stamped 67 ms; with
-/// no slack it would miss its tick, go out a tick late, and the frame after it
-/// would be skipped. One millisecond is far below anything a viewer sees and
-/// above any container's rounding.
-pub const SLACK_NS: u64 = 1_000_000;
-
-/// Pictures drawn ahead of the output. Four frames at 1080p is 12 MB.
-const AHEAD: usize = 4;
-
-/// What the item's threads share.
-pub struct Shared {
-    pub canvas: Canvas,
-    pub fit: Fit,
-    pub start_ns: u64,
-    pub out_ns: Option<u64>,
-    pub software_only: bool,
-    pub stop: AtomicBool,
-    pub status: Status,
-    pub audio: AudioQueue,
-    pub frames_tx: SyncSender<Frame>,
-    pub decoder: Mutex<Option<Arc<VideoDecoder>>>,
-    /// Frames the output has finished with, to draw the next ones into.
-    pub spare: Mutex<Vec<Vec<u8>>>,
-}
-
-impl Shared {
-    pub fn take_buffer(&self) -> Vec<u8> {
-        let size = self.canvas.i420_frame_bytes();
-        self.spare.lock().unwrap_or_else(|e| e.into_inner()).pop().filter(|b| b.len() == size).unwrap_or_else(|| vec![0; size])
-    }
-}
+pub use shared::{Frame, Shared, AHEAD, SLACK_NS};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Media {
@@ -101,7 +64,7 @@ impl ItemPlayer {
             decoder: Mutex::new(None),
             spare: Mutex::new(Vec::new()),
         });
-        spawn(shared.clone(), PathBuf::from(&item.path));
+        open::spawn(shared.clone(), PathBuf::from(&item.path));
         ItemPlayer {
             id: item.id.clone(),
             start_ns,
@@ -184,82 +147,4 @@ impl ItemPlayer {
             }
         }
     }
-
-    /// Whether the item has run out at `item_ns`.
-    pub fn ended(&mut self, item_ns: u64) -> bool {
-        if self.out_ns.is_some_and(|o| item_ns >= o) {
-            return true;
-        }
-        match self.media() {
-            None => false,
-            Some(Media::Picture) => item_ns >= self.start_ns + self.still_ns,
-            Some(Media::Sound) => self.shared.audio.drained(),
-            Some(Media::Video) => {
-                let s = self.status();
-                let last = s.last_pts.unwrap_or(0) + s.frame_ns.unwrap_or(0);
-                s.video_done && item_ns + SLACK_NS >= last.max(self.start_ns)
-            }
-        }
-    }
-
-    /// How long the item runs from its start, when that is known.
-    pub fn length_ns(&self) -> Option<u64> {
-        let end = match self.media() {
-            Some(Media::Picture) => Some(self.start_ns + self.still_ns),
-            _ => self.status().duration_ns,
-        };
-        let end = match (end, self.out_ns) {
-            (Some(e), Some(o)) => Some(e.min(o)),
-            (e, o) => e.or(o),
-        };
-        end.map(|e| e.saturating_sub(self.start_ns))
-    }
-}
-
-impl Drop for ItemPlayer {
-    fn drop(&mut self) {
-        self.shared.stop.store(true, Ordering::Relaxed);
-        self.shared.audio.close();
-        // Setting a pipeline to NULL can take a moment, and this runs on the
-        // output thread: hand it to a thread of its own.
-        let decoder = self.shared.decoder.lock().unwrap_or_else(|e| e.into_inner()).take();
-        if let Some(d) = decoder {
-            let _ = std::thread::Builder::new().name("playout-close".into()).spawn(move || d.close());
-        }
-    }
-}
-
-/// Look at the file and read it, on a thread of its own: even opening a
-/// file can stall on a network share, and the output thread must not.
-fn spawn(shared: Arc<Shared>, path: PathBuf) {
-    let _ = std::thread::Builder::new().name("playout-item".into()).spawn(move || {
-        let media = match sniff(&path) {
-            Ok(Container::Picture) => Media::Picture,
-            Ok(Container::Audio) => Media::Sound,
-            Ok(_) => Media::Video,
-            Err(e) => {
-                shared.status.fail(e);
-                shared.audio.finish();
-                return;
-            }
-        };
-        shared.status.update(|s| s.media = Some(media));
-        match media {
-            Media::Video => feed::video(shared, path),
-            Media::Sound => feed::audio(shared, path),
-            Media::Picture => picture(shared, path),
-        }
-    });
-}
-
-fn picture(shared: Arc<Shared>, path: PathBuf) {
-    let size = (shared.canvas.width, shared.canvas.height);
-    match crate::media::still::load(&path, size, shared.fit) {
-        Ok(data) => {
-            shared.status.update(|s| s.has_video = Some(true));
-            let _ = shared.frames_tx.send(Frame { pts: shared.start_ns, data: Arc::new(data) });
-        }
-        Err(e) => shared.status.fail(e),
-    }
-    shared.audio.finish();
 }

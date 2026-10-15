@@ -1,4 +1,5 @@
 use super::*;
+use crate::settings::Item;
 
 fn items(ids: &[&str]) -> Vec<Item> {
     ids.iter()

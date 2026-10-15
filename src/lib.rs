@@ -7,6 +7,7 @@
 //! platform's own decoders and never FFmpeg. README.md says why.
 
 pub mod catalog;
+pub mod choices;
 pub mod engine;
 pub mod gst_runtime;
 pub mod item;

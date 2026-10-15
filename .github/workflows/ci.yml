@@ -22,7 +22,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - uses: Swatinem/rust-cache@v2
       - name: GStreamer (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -41,6 +40,18 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./ci/install-gstreamer-windows.ps1
+      # Homebrew's GStreamer moves to a new Cellar folder with every update,
+      # and a cached build still links against the old one, so the cache is
+      # keyed on the versions installed.
+      - name: Note the GStreamer version for the cache key
+        shell: bash
+        run: |
+          if command -v brew >/dev/null; then stamp=$(brew list --versions gstreamer glib | tr ' 
+' '__'); else stamp=fixed; fi
+          echo "GST_STAMP=$stamp" >> "$GITHUB_ENV"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.platform || matrix.os }}-${{ env.GST_STAMP }}
       - name: Build
         run: cargo build --release --locked --workspace
       - name: Unit tests and the offline transcript
