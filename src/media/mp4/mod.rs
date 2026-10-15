@@ -50,6 +50,7 @@ impl Mp4 {
             video: video.as_ref().and_then(|c| match &c.track.carries { Carries::Video(v) => Some(v.clone()), _ => None }),
             audio: audio.as_ref().and_then(|c| match &c.track.carries { Carries::Audio(a) => Some(a.clone()), _ => None }),
         };
+        file.seek(SeekFrom::Start(0)).map_err(|e| format!("could not read {}: {e}", path.display()))?;
         Ok(Mp4 { file: BufReader::with_capacity(1 << 20, file), pos: 0, info, video, audio })
     }
 
@@ -99,10 +100,13 @@ impl Demux for Mp4 {
         let s = cursor.track.samples[cursor.next];
         let (pts, dts) = (cursor.track.pts_ns(&s), cursor.track.dts_ns(&s));
         let cursor_signed = cursor.track.signed_ns(s.dts as i64 + s.cto);
+        let cursor_dts = cursor.track.signed_ns(s.dts as i64);
         cursor.next += 1;
         let data = self.read_at(s.offset, s.size)?;
         Ok(Some(if take_video {
-            Packet::Video { pts, dts: Some(dts), key: s.sync, data }
+            // A decode time the edit list puts before zero has no GStreamer
+            // spelling; the decoder works it out from the order instead.
+            Packet::Video { pts, dts: (cursor_dts >= 0).then_some(dts), key: s.sync, data }
         } else {
             Packet::Audio { pts: cursor_signed, data }
         }))

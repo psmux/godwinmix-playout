@@ -12,6 +12,10 @@ publish = false
 [workspace]
 members = [".", "launch"]
 
+[lib]
+name = "godwinmix_playout"
+path = "src/lib.rs"
+
 [[bin]]
 name = "playout-engine"
 path = "src/main.rs"

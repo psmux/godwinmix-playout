@@ -56,6 +56,13 @@ impl Converter {
         if let Some((pts, held)) = self.held.take() {
             self.send(pts, &held);
         }
+        if self.last.is_none() && !self.shared.stop.load(Ordering::Relaxed) {
+            self.shared.status.fail(format!(
+                "{} gave no pictures for this file. Its profile is probably one that decoder does not take (4:4:4 or 10 bit H.264 are the usual ones); convert it to ordinary 8 bit 4:2:0",
+                self.decoder.element
+            ));
+            return;
+        }
         let (last, step) = (self.last, self.step);
         self.shared.status.update(|s| {
             s.video_done = true;

@@ -1,0 +1,86 @@
+[plugin]
+name = "playout"
+version = "1.0.0"
+api = 1
+description = "A playlist as one source: video, sound and picture files played back to back with no black frame, no gap in the sound and no jump in time between them, in any mix of sizes, frame rates and codecs. Loop the list or one item, shuffle, cue, skip, seek, in and out points, hold on a last frame, and a panel to run it all from. Native Rust, with the platform's own video decoders and no FFmpeg."
+license = "Apache-2.0"
+authors = ["psmux"]
+repository = "https://github.com/psmux/godwinmix-playout"
+platforms = ["linux-x86_64", "linux-aarch64", "macos-aarch64", "macos-x86_64", "windows-x86_64"]
+placements = ["sidecar"]
+process = "per-instance"
+
+[run]
+# On macOS and Linux `playout` finds GStreamer and becomes the engine; on
+# Windows the engine finds GStreamer itself. See launch/src/main.rs.
+bin = { "linux-x86_64" = "bin/playout", "linux-aarch64" = "bin/playout", "macos-aarch64" = "bin/playout", "macos-x86_64" = "bin/playout", "windows-x86_64" = "bin/playout-engine.exe" }
+
+[[provides]]
+kind = "source"
+id = "playlist"
+media = { video = "raw", audio = "raw", alpha = false, thumb = true }
+transports = ["container"]
+capabilities = ["restart-in-place", "health"]
+latency_ms = 0
+settings = "schemas/playlist.json"
+skill = "skills/playlist/SKILL.md"
+
+[[provides]]
+kind = "panel"
+id = "panel"
+panel = { kind = "custom-element", entry = "ui/panel.js", slots = ["sidebar", "main"] }
+
+[[tools]]
+name = "state"
+description = "Everything about one playlist source now: whether it is playing, the item on air with its position and time left, what plays next, the cue, every item with its length and any reason it will not play, and the time to the end of the list. Use before changing anything, and to answer what is on or how long is left. Example: state {\"source\": \"lobby\"} returns {mode: 'playing', current: {id: 'intro', position_ms: 4200, remaining_ms: 25800}, next: 'promo', list: {count: 12, remaining_ms: 1834000}, items: [...]}."
+input = "schemas/tools/source_only.json"
+annotations = { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false }
+
+[[tools]]
+name = "play"
+description = "Play: resume after pause, go on after an item that holds on its last frame, or start the list again after it ran out. Example: play {\"source\": \"lobby\"}."
+input = "schemas/tools/source_only.json"
+annotations = { readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false }
+
+[[tools]]
+name = "pause"
+description = "Pause on the current picture, with silence, until play. Example: pause {\"source\": \"lobby\"}."
+input = "schemas/tools/source_only.json"
+annotations = { readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false }
+
+[[tools]]
+name = "next"
+description = "Skip to the next item now. The current one plays on until the next has its first picture, so nothing black goes out. Example: next {\"source\": \"lobby\"}."
+input = "schemas/tools/source_only.json"
+annotations = { readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false }
+
+[[tools]]
+name = "previous"
+description = "Back to the start of the current item, or to the item before when it is less than three seconds in. Example: previous {\"source\": \"lobby\"}."
+input = "schemas/tools/source_only.json"
+annotations = { readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false }
+
+[[tools]]
+name = "play_item"
+description = "Play one item now, by its id from state. Example: play_item {\"source\": \"lobby\", \"id\": \"promo\"}."
+input = "schemas/tools/item.json"
+annotations = { readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false }
+
+[[tools]]
+name = "cue"
+description = "Play one item after the current one, once, then carry on from it. An empty id clears the cue. Example: cue {\"source\": \"lobby\", \"id\": \"sponsor\"}."
+input = "schemas/tools/cue.json"
+annotations = { readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false }
+
+[[tools]]
+name = "seek"
+description = "Move in the current item, in milliseconds from its in point. Example: seek {\"source\": \"lobby\", \"position_ms\": 30000}."
+input = "schemas/tools/seek.json"
+annotations = { readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false }
+
+[[tools]]
+name = "thumbnail"
+description = "A small JPEG of one item as a data URI, made the first time it is asked for; until then ready is false, and state's thumbs_made goes up when it is done. Example: thumbnail {\"source\": \"lobby\", \"id\": \"intro\", \"width\": 160}."
+input = "schemas/tools/thumbnail.json"
+annotations = { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false }
+user_invocable = false

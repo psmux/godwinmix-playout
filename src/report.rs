@@ -27,7 +27,7 @@ pub fn item_ms(item: &Item, settings: &Settings, catalog: &Catalog) -> Option<u6
 pub fn state(settings: &Settings, snap: &Snapshot, catalog: &Catalog) -> Value {
     let items: Vec<Value> = settings.items.iter().map(|i| item(i, settings, snap, catalog)).collect();
     let total: u64 = settings.items.iter().filter_map(|i| item_ms(i, settings, catalog)).sum();
-    let unknown = settings.items.iter().filter(|i| item_ms(i, settings, catalog).is_none()).count();
+    let unknown = settings.items.iter().filter(|i| catalog.probe(&i.path).is_none()).count();
     let remaining_item = snap.length_ms.map(|l| l.saturating_sub(snap.position_ms));
     json!({
         "mode": snap.mode,
@@ -91,16 +91,18 @@ fn item(i: &Item, settings: &Settings, snap: &Snapshot, catalog: &Catalog) -> Va
 
 /// From now to the end of this pass of the list: what is left of the
 /// current item and the length of every item after it in the play order.
-/// A cued item is counted where it will play.
+/// Items that will not play count nothing; items not looked at yet count
+/// nothing either, and `unknown_lengths` says how many there are.
 fn list_remaining(settings: &Settings, snap: &Snapshot, catalog: &Catalog, current_left: Option<u64>) -> Option<u64> {
     let at = snap.current.as_ref().and_then(|c| snap.order.iter().position(|o| o == c))?;
     let mut left = current_left?;
     for id in &snap.order[at + 1..] {
-        let item = settings.items.iter().find(|i| &i.id == id)?;
         if snap.errors.contains_key(id) {
             continue;
         }
-        left += item_ms(item, settings, catalog)?;
+        if let Some(item) = settings.items.iter().find(|i| &i.id == id) {
+            left += item_ms(item, settings, catalog).unwrap_or(0);
+        }
     }
     Some(left)
 }

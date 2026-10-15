@@ -1,26 +1,7 @@
-//! godwinmix-playout: a playlist of video, sound and picture files played
-//! back to back as one GodwinMix source, with no gap between them.
-//!
-//! Rust does the playlist, the timing, the containers (MP4, Matroska), the
-//! sound (symphonia), the pictures (image), the scaling (fast_image_resize)
-//! and the protocol (godwinmix-sdk). GStreamer decodes video, through the
-//! platform's own decoders and never FFmpeg. README.md says why.
+//! The engine binary: the protocol loop around `godwinmix_playout::source`.
 
-mod catalog;
-mod engine;
-mod gst_runtime;
-mod item;
-mod media;
-mod queue;
-mod report;
-mod settings;
-mod source;
-mod state;
-mod thumbs;
-mod tools;
-
+use godwinmix_playout::{gst_runtime, source};
 use godwinmix_sdk::prelude::*;
-
 fn main() {
     // First, before any thread: on Windows this may put GStreamer on PATH.
     gst_runtime::locate();

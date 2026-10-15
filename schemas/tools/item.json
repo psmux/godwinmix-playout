@@ -1,0 +1,1 @@
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["source", "id"], "properties": {"source": {"type": "string", "description": "The id of the playlist source, as source.list shows it.", "examples": ["lobby"]}, "id": {"type": "string", "description": "The item's id, from state.", "examples": ["promo"]}}}

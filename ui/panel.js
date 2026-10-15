@@ -1,0 +1,1 @@
+window.godwinmixPanels = window.godwinmixPanels || [];
