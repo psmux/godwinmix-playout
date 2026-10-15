@@ -129,7 +129,7 @@ impl Engine {
         let wanted = self.queue.after(current.as_deref(), self.settings.repeat).map(|n| n.id);
         // Gone from the list, or edited since it was opened: a new in point
         // or hold has to be read again.
-        let item_changed = !self.settings.items.iter().any(|i| *i == n.player.item);
+        let item_changed = !self.settings.items.contains(&n.player.item);
         if wanted.as_deref() != Some(n.player.id.as_str()) || item_changed {
             self.next = None;
         }
