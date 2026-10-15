@@ -51,7 +51,8 @@ Alt with Up or Down move it, L cycle the loop, S shuffle, / search, ? help.
 From the mixer: **Plugins**, find **Playout**, **Install**. Or from a shell:
 
 ```sh
-gmx plugin add playout
+gmx plugin add playout                    # once it is in the gallery
+gmx plugin add psmux/godwinmix-playout    # straight from this repository's release
 ```
 
 It needs GodwinMix 0.3.13 or newer. On Windows and macOS it uses the GStreamer
