@@ -131,11 +131,26 @@ playing into a 1920x1080 at 30 fps show:
   only black frames were the WAV file's, which has no picture.
   `examples/gaps.rs` does the measuring; `dev/capture.py` runs the engine
   without a mixer.
-* **CPU.** 14 percent of one core for 1080p H.264 decoded on the GPU and sent
-  at 1080p30, 41 percent of one core with the same file decoded in software
-  (openh264), as a laptop with no usable GPU would. Sending a still picture
-  costs 8 percent of one core, which is the price of the pipe to the mixer:
-  93 MB a second of raw 1080p.
+* **A long mixed run.** The test list of every kind this plays (H.264,
+  HEVC, AV1 with Opus, VP9 with Vorbis, MP3, WAV, PNG, JPEG, a portrait clip
+  with no sound and a missing file) went round for 10 minutes 50 seconds on
+  the programme: 19,495 frames, not one off its step, every item exactly as
+  long as it is. The only silence was where an item has no sound; between two
+  lossy files there are 5 to 15 ms that the files themselves carry, which is
+  the AAC and MP3 encoders' own padding.
+* **CPU**, measured on the engine with no mixer, sending 1920x1080 at 30 fps:
+
+  | Playing | One core |
+  |---|---|
+  | a picture | 7 percent: the pipe, 93 MB a second of raw video |
+  | 1080p H.264, decoded on the GPU | 16 percent |
+  | 1080p H.264, decoded in software (openh264) | 38 percent |
+  | 720p H.264 on a 720p show | 9 percent |
+  | 720p H.264 scaled up to 1080p | 39 percent, most of it the scaling |
+
+  Scaling costs about 7 ms a frame for 720p to 1080p and 1 ms when the file
+  already matches the show (`examples/scalebench.rs`), so files made at the
+  show's size are the cheap ones.
 
 ## Where things are
 
