@@ -46,8 +46,7 @@ jobs:
       - name: Note the GStreamer version for the cache key
         shell: bash
         run: |
-          if command -v brew >/dev/null; then stamp=$(brew list --versions gstreamer glib | tr ' 
-' '__'); else stamp=fixed; fi
+          if command -v brew >/dev/null; then stamp=$(brew list --versions gstreamer glib | tr -c 'A-Za-z0-9.' '_'); else stamp=fixed; fi
           echo "GST_STAMP=$stamp" >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2
         with:
