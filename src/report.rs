@@ -62,6 +62,7 @@ pub fn state(settings: &Settings, snap: &Snapshot, catalog: &Catalog, items_sinc
         "fit": settings.fit,
         "still_seconds": settings.still_seconds,
         "autoplay": settings.autoplay,
+        "sound_picture": settings.sound_picture,
         "frames": snap.frames,
         "repeated_frames": snap.repeats,
         "changes": snap.changes,

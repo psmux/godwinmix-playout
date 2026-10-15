@@ -24,6 +24,7 @@ sizes, frame rates and codecs come out at the show's own canvas.
   an item's last frame until you press play.
 * A file that is missing or will not decode is skipped, named in the panel and
   in the mixer's log, and the list plays on.
+* While a sound file plays, the picture is black or holds what played before.
 * Several playlists, each its own source, saved with the project.
 
 ## The panel
@@ -37,7 +38,9 @@ items to reorder them, double click to play one now, and add files from the
 mixer's media library, with the file picker, or by dropping them on the panel.
 It follows the mixer's light and dark themes and works on a phone.
 
-![Picking files from the media library](gallery/screenshot-3.png)
+![The light theme](gallery/screenshot-3.png)
+
+![Picking files from the media library](gallery/screenshot-4.png)
 
 Keyboard, while the panel has focus: Space play and pause, N or Right next, P
 or Left previous, Enter play the selected item, C cue it, Delete remove it,

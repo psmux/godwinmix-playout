@@ -43,6 +43,7 @@ export function openOptions(model) {
     select("When the list ends", st.at_end || "black", [["black", "Go to black"], ["hold", "Hold the last picture"]], (v) => model.setOption("at_end", v)),
     select("Fit pictures and video", st.fit || "fit", [["fit", "Fit inside the frame"], ["fill", "Fill the frame and crop"], ["stretch", "Stretch to the frame"]], (v) => model.setOption("fit", v)),
     seconds(st.still_seconds ?? 10, (v) => model.setOption("still_seconds", v)),
+    select("While sound plays", st.sound_picture || "black", [["black", "Show black"], ["hold", "Hold the last picture"]], (v) => model.setOption("sound_picture", v)),
     select("When the source starts", st.autoplay === false ? "wait" : "play", [["play", "Start playing"], ["wait", "Wait for play"]], (v) => model.setOption("autoplay", v === "play")),
   );
   foot.append(h("button.po-btn.primary", { text: "Done", onclick: close }));

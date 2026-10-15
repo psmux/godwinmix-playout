@@ -68,6 +68,16 @@ pub enum Fit {
     Stretch,
 }
 
+/// What the picture is while a sound file plays.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum SoundPicture {
+    #[default]
+    Black,
+    /// The last picture of whatever played before, under the music.
+    Hold,
+}
+
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct Settings {
@@ -80,6 +90,7 @@ pub struct Settings {
     pub fit: Fit,
     /// Start playing as soon as the source starts.
     pub autoplay: bool,
+    pub sound_picture: SoundPicture,
 }
 
 impl Default for Settings {
@@ -92,6 +103,7 @@ impl Default for Settings {
             still_seconds: 10.0,
             fit: Fit::Fit,
             autoplay: true,
+            sound_picture: SoundPicture::Black,
         }
     }
 }

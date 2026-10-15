@@ -9,26 +9,173 @@
       "title": "Items",
       "description": "The files, in the order they play. Video (MP4, MOV, MKV, WebM), sound (MP3, WAV, FLAC, Ogg, M4A) and pictures (PNG, JPEG, WebP, GIF, BMP, TIFF) can be mixed freely.",
       "default": [],
-      "examples": [[{"id": "intro", "path": "/media/intro.mp4"}, {"id": "logo", "path": "/media/logo.png", "still_ms": 5000}]],
+      "examples": [
+        [
+          {
+            "id": "intro",
+            "path": "/media/intro.mp4"
+          },
+          {
+            "id": "logo",
+            "path": "/media/logo.png",
+            "still_ms": 5000
+          }
+        ]
+      ],
       "items": {
         "type": "object",
-        "required": ["path"],
+        "required": [
+          "path"
+        ],
         "properties": {
-          "id": {"type": "string", "description": "A short id unique in this list. Made from the path when left out.", "default": "", "examples": ["intro"]},
-          "path": {"type": "string", "description": "The file, on the machine the mixer runs on.", "examples": ["/media/intro.mp4", "C:\\Media\\intro.mp4"]},
-          "title": {"type": "string", "description": "What the panel shows. The file name when empty.", "default": "", "examples": ["Welcome"]},
-          "in_ms": {"type": "integer", "minimum": 0, "description": "Start this far into the file.", "default": 0, "examples": [2500], "x-gmx-unit": "ms"},
-          "out_ms": {"type": "integer", "minimum": 0, "description": "Stop this far into the file. 0 is the end.", "default": 0, "examples": [60000], "x-gmx-unit": "ms"},
-          "still_ms": {"type": "integer", "minimum": 0, "description": "How long a picture stays up. 0 uses still_seconds.", "default": 0, "examples": [8000], "x-gmx-unit": "ms"},
-          "hold": {"type": "boolean", "description": "Stop on this item's last frame and wait for play or next.", "default": false, "examples": [true]}
+          "id": {
+            "type": "string",
+            "description": "A short id unique in this list. Made from the path when left out.",
+            "default": "",
+            "examples": [
+              "intro"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "The file, on the machine the mixer runs on.",
+            "examples": [
+              "/media/intro.mp4",
+              "C:\\Media\\intro.mp4"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "What the panel shows. The file name when empty.",
+            "default": "",
+            "examples": [
+              "Welcome"
+            ]
+          },
+          "in_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Start this far into the file.",
+            "default": 0,
+            "examples": [
+              2500
+            ],
+            "x-gmx-unit": "ms"
+          },
+          "out_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Stop this far into the file. 0 is the end.",
+            "default": 0,
+            "examples": [
+              60000
+            ],
+            "x-gmx-unit": "ms"
+          },
+          "still_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "How long a picture stays up. 0 uses still_seconds.",
+            "default": 0,
+            "examples": [
+              8000
+            ],
+            "x-gmx-unit": "ms"
+          },
+          "hold": {
+            "type": "boolean",
+            "description": "Stop on this item's last frame and wait for play or next.",
+            "default": false,
+            "examples": [
+              true
+            ]
+          }
         }
       }
     },
-    "loop": {"type": "string", "enum": ["all", "one", "off"], "title": "Loop", "description": "all: back to the top after the last item. one: the current item again and again. off: stop after the last item.", "default": "all", "examples": ["off"]},
-    "shuffle": {"type": "boolean", "title": "Shuffle", "description": "Play the list in a random order, a new one each time round.", "default": false, "examples": [true]},
-    "at_end": {"type": "string", "enum": ["black", "hold"], "title": "When the list ends", "description": "With loop off: black, or hold the last frame.", "default": "black", "examples": ["hold"]},
-    "still_seconds": {"type": "number", "minimum": 0.5, "maximum": 86400, "title": "Picture time", "description": "How long a picture stays up when its item does not say.", "default": 10, "examples": [6], "x-gmx-unit": "s"},
-    "fit": {"type": "string", "enum": ["fit", "fill", "stretch"], "title": "Fit", "description": "A file of another shape than the canvas: fit shows all of it with bars, fill crops it to fill the canvas, stretch squashes it to fit.", "default": "fit", "examples": ["fill"]},
-    "autoplay": {"type": "boolean", "title": "Play at start", "description": "Start playing as soon as the source starts.", "default": true, "examples": [false]}
+    "loop": {
+      "type": "string",
+      "enum": [
+        "all",
+        "one",
+        "off"
+      ],
+      "title": "Loop",
+      "description": "all: back to the top after the last item. one: the current item again and again. off: stop after the last item.",
+      "default": "all",
+      "examples": [
+        "off"
+      ]
+    },
+    "shuffle": {
+      "type": "boolean",
+      "title": "Shuffle",
+      "description": "Play the list in a random order, a new one each time round.",
+      "default": false,
+      "examples": [
+        true
+      ]
+    },
+    "at_end": {
+      "type": "string",
+      "enum": [
+        "black",
+        "hold"
+      ],
+      "title": "When the list ends",
+      "description": "With loop off: black, or hold the last frame.",
+      "default": "black",
+      "examples": [
+        "hold"
+      ]
+    },
+    "still_seconds": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 86400,
+      "title": "Picture time",
+      "description": "How long a picture stays up when its item does not say.",
+      "default": 10,
+      "examples": [
+        6
+      ],
+      "x-gmx-unit": "s"
+    },
+    "fit": {
+      "type": "string",
+      "enum": [
+        "fit",
+        "fill",
+        "stretch"
+      ],
+      "title": "Fit",
+      "description": "A file of another shape than the canvas: fit shows all of it with bars, fill crops it to fill the canvas, stretch squashes it to fit.",
+      "default": "fit",
+      "examples": [
+        "fill"
+      ]
+    },
+    "autoplay": {
+      "type": "boolean",
+      "title": "Play at start",
+      "description": "Start playing as soon as the source starts.",
+      "default": true,
+      "examples": [
+        false
+      ]
+    },
+    "sound_picture": {
+      "type": "string",
+      "enum": [
+        "black",
+        "hold"
+      ],
+      "title": "Picture under sound",
+      "description": "While a sound file plays: black, or hold the last picture of what played before.",
+      "default": "black",
+      "examples": [
+        "hold"
+      ]
+    }
   }
 }

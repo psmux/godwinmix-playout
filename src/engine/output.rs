@@ -3,7 +3,7 @@
 use super::Engine;
 use crate::item::Media;
 use crate::media::resample::RATE;
-use crate::settings::AtEnd;
+use crate::settings::{AtEnd, SoundPicture};
 use crate::state::Mode;
 use std::sync::Arc;
 
@@ -45,7 +45,8 @@ impl Engine {
                 None if self.current.as_mut().is_some_and(|c| c.player.media() == Some(Media::Video)) => self.repeats += 1,
                 None => {}
             }
-            if self.current.as_mut().is_some_and(|c| c.player.media() == Some(Media::Sound)) {
+            let sound_only = self.current.as_mut().is_some_and(|c| c.player.media() == Some(Media::Sound));
+            if sound_only && self.settings.sound_picture == SoundPicture::Black {
                 self.last = self.black.clone();
             }
         }
@@ -104,7 +105,17 @@ impl Engine {
         s.position_ms = position / 1_000_000;
         s.length_ms = self.current.as_ref().and_then(|c| c.player.length_ns()).map(|n| n / 1_000_000);
         s.decoder = self.current.as_ref().and_then(|c| c.player.status().decoder);
-        s.next = self.next.as_ref().map(|n| n.player.id.clone());
+        // What plays next, whether or not it has been opened yet: the item is
+        // opened five seconds before its turn, and the panel wants to say
+        // what comes next all the way through a long item.
+        let current = self.current.as_ref().map(|c| c.player.id.clone());
+        s.next = match self.next.as_ref() {
+            Some(n) => Some(n.player.id.clone()),
+            None if self.mode == Mode::Playing || self.mode == Mode::Paused => {
+                self.queue.after(current.as_deref(), self.settings.repeat).map(|n| n.id)
+            }
+            None => None,
+        };
         s.next_ready = self.next.as_mut().is_some_and(|n| n.player.ready());
         s.cued = self.queue.cued().map(str::to_string);
         if s.order.len() != self.queue.order().len() || s.order.iter().zip(self.queue.order()).any(|(a, b)| a != b) {
