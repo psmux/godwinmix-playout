@@ -68,6 +68,20 @@ jobs:
         run: cargo build --release --locked --workspace
       - name: Test
         run: cargo test --release --locked --workspace
+      # The built engine, started the way the core starts it (through the
+      # launcher on macOS and Linux), plays a VP8 and Vorbis file, a WAV and a
+      # PNG made here, with no core: decode through the platform's GStreamer,
+      # item changes, the protocol. libvpx is in every GStreamer this runs on.
+      - name: Smoke test with no core
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then sudo apt-get install -y gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-tools; fi
+          mkdir -p smoke
+          gst-launch-1.0 -q -e videotestsrc num-buffers=60 ! video/x-raw,width=640,height=360,framerate=30/1 ! vp8enc deadline=1 ! webmmux name=m ! filesink location=smoke/a.webm audiotestsrc num-buffers=94 ! audio/x-raw,rate=48000,channels=2 ! audioconvert ! vorbisenc ! m.
+          gst-launch-1.0 -q -e audiotestsrc num-buffers=47 ! audio/x-raw,rate=44100,channels=2 ! wavenc ! filesink location=smoke/b.wav
+          gst-launch-1.0 -q videotestsrc num-buffers=1 ! video/x-raw,width=320,height=240 ! pngenc ! filesink location=smoke/c.png
+          python3 dev/capture.py --engine target/release/playout --seconds 10 --size 640x360x30 --out smoke/out.mkv --check smoke/a.webm smoke/b.wav smoke/c.png
       - name: Package
         shell: bash
         run: bash dev/package.sh ${{ matrix.platform }} target/release dist

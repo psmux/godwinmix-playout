@@ -47,13 +47,15 @@ def main():
     ap.add_argument("--out", default="capture.mkv")
     ap.add_argument("--size", default="1280x720x30")
     ap.add_argument("--loop", default="all")
+    ap.add_argument("--engine", help="the binary to start: bin/playout on macOS and Linux tests the launcher too")
+    ap.add_argument("--check", action="store_true", help="exit 1 unless every item played without an error")
     a = ap.parse_args()
     w, h, fps = (int(x) for x in a.size.split("x"))
     items = [{"id": "i%d" % n, "path": os.path.abspath(f)} for n, f in enumerate(a.files)]
     env = dict(os.environ, GMX_PLUGIN="playout", GMX_PROVIDE="playlist", GMX_INSTANCE="capture",
                GMX_API_LEVEL="1", GMX_PLUGIN_ROOT=ROOT)
     out = open(a.out, "wb")
-    p = subprocess.Popen([engine()], cwd=ROOT, env=env, stdin=subprocess.PIPE, stdout=out, stderr=subprocess.PIPE)
+    p = subprocess.Popen([a.engine or engine()], cwd=ROOT, env=env, stdin=subprocess.PIPE, stdout=out, stderr=subprocess.PIPE)
     lines = []
     threading.Thread(target=lambda: [lines.append(l.decode("utf-8", "replace").strip()) for l in p.stderr], daemon=True).start()
 
@@ -86,7 +88,26 @@ def main():
     for l in lines:
         if '"log"' in l or '"id":2' in l:
             print(l)
-    print("wrote", a.out, os.path.getsize(a.out), "bytes")
+    print("wrote", a.out, os.path.getsize(a.out) if os.path.exists(a.out) else 0, "bytes")
+    if a.check:
+        check(lines, a.seconds * fps, len(items))
+
+
+def check(lines, frames_due, count):
+    """The state answer says every item played and nothing failed."""
+    answer = next((json.loads(l) for l in lines if l.startswith("{") and '"id":2' in l), None)
+    st = (answer or {}).get("result", {}).get("structuredContent", {})
+    errors = [i.get("error") for i in st.get("items", []) if i.get("error")]
+    problems = []
+    if errors:
+        problems.append("items failed: %s" % errors)
+    if st.get("frames", 0) < frames_due * 0.8:
+        problems.append("only %s frames for %d due" % (st.get("frames"), frames_due))
+    if st.get("changes", 0) < count:
+        problems.append("only %s item changes for %d items" % (st.get("changes"), count))
+    if problems:
+        sys.exit("capture check failed: " + "; ".join(problems))
+    print("capture check: %s frames, %s item changes, no errors" % (st.get("frames"), st.get("changes")))
 
 
 if __name__ == "__main__":
