@@ -53,7 +53,7 @@ impl VideoDecoder {
             chain.push(p.to_string());
         }
         chain.push(element.to_string());
-        chain.push("appsink name=sink sync=false max-buffers=3 enable-last-sample=false caps=video/x-raw,format={NV12,I420,P010_10LE,I420_10LE}".into());
+        chain.push("appsink name=sink sync=false async=false max-buffers=3 enable-last-sample=false caps=video/x-raw,format={NV12,I420,P010_10LE,I420_10LE}".into());
         let pipeline = gst::parse::launch(&chain.join(" ! "))
             .map_err(|e| format!("the {element} pipeline did not build: {e}"))?
             .downcast::<gst::Pipeline>()

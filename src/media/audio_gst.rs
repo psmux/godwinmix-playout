@@ -20,7 +20,7 @@ impl GstAudio {
     pub fn opus(track: &AudioTrack) -> Res<GstAudio> {
         crate::gst_runtime::ready()?;
         let pipeline = gst::parse::launch(
-            "appsrc name=src format=time ! opusdec ! appsink name=sink sync=false \
+            "appsrc name=src format=time ! opusdec ! appsink name=sink sync=false async=false \
              caps=audio/x-raw,format=S16LE,layout=interleaved,rate=48000",
         )
         .map_err(|e| format!("the Opus decoder (opusdec) is not here: {e}"))?
@@ -31,10 +31,11 @@ impl GstAudio {
         let channels = track.channels.clamp(1, 2) as i32;
         src.set_caps(Some(&gst::Caps::builder("audio/x-opus").field("channel-mapping-family", 0i32).field("channels", channels).field("rate", 48_000i32).build()));
         pipeline.set_state(gst::State::Playing).map_err(|e| format!("the Opus decoder would not start: {e}"))?;
-        // Wait for PLAYING here, on the item's own thread. Until then the
-        // sink holds its first buffer and gives nothing, and that was a second
-        // and more of silence at the start of every Opus item.
-        let _ = pipeline.state(gst::ClockTime::from_seconds(5));
+        // `async=false` on the sink: PLAYING at once, with no wait for a
+        // first buffer to preroll. With the wait, the sink held its first
+        // buffer back, and waiting for the state change held the whole item
+        // for five seconds, since nothing arrives here until it is pushed.
+        let _ = pipeline.state(gst::ClockTime::from_mseconds(500));
         let me = GstAudio { pipeline, src, sink, channels: channels as usize };
         if let Some(head) = track.config.clone() {
             // In band headers: opusdec reads OpusHead from the first buffer.

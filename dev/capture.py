@@ -93,7 +93,7 @@ def main():
     p.wait(timeout=10)
     out.close()
     for l in lines:
-        if '"log"' in l or '"id":2' in l:
+        if '"log"' in l or '"id":2' in l or l.startswith('DEBUG'):
             print(l)
     print("wrote", a.out, os.path.getsize(a.out) if os.path.exists(a.out) else 0, "bytes")
     if a.check:
