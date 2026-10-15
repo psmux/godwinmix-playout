@@ -7,11 +7,12 @@
 # holding one `playout/` folder with the manifest at its top, which is what
 # `gmx plugin add` and the gallery install. The version is the manifest's.
 set -euo pipefail
-platform="$1"; bins="$2"; out="$3"
+platform="$1"; bins="$(cd "$2" && pwd)"
+mkdir -p "$3"; out="$(cd "$3" && pwd)"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 version="$(sed -n 's/^version = "\(.*\)"/\1/p' "$root/gmx-plugin.toml" | head -1)"
 stage="$(mktemp -d)/playout"
-mkdir -p "$stage/bin" "$out"
+mkdir -p "$stage/bin"
 cp -r "$root/gmx-plugin.toml" "$root/README.md" "$root/LICENSE" "$root/schemas" "$root/skills" "$root/ui" "$stage/"
 case "$platform" in
     windows-*)
