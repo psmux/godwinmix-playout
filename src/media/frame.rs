@@ -54,7 +54,7 @@ fn narrow(p: Plane, samples_per_row: usize, shift: u32) -> Vec<u8> {
     let mut out = Vec::with_capacity(samples_per_row * p.height as usize);
     for row in 0..p.height as usize {
         let line = &p.data[row * p.stride..row * p.stride + samples_per_row * 2];
-        out.extend(line.chunks_exact(2).map(|b| (u16::from_le_bytes([b[0], b[1]]) >> shift).min(255) as u8));
+        out.extend(line.as_chunks::<2>().0.iter().map(|b| (u16::from_le_bytes([b[0], b[1]]) >> shift).min(255) as u8));
     }
     out
 }

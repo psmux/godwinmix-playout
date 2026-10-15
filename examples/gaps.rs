@@ -89,7 +89,7 @@ fn report_video(pts: &[u64], luma: &[u64]) {
 fn report_sound(pcm: &[f32], start_ns: i64) {
     // 5 ms windows of the left channel: loudness, and pitch from zero crossings.
     let win = 240usize;
-    let left: Vec<f32> = pcm.chunks_exact(2).map(|f| f[0]).collect();
+    let left: Vec<f32> = pcm.as_chunks::<2>().0.iter().map(|f| f[0]).collect();
     // Pitch is read over 20 ms from the window's start: 5 ms of a 330 Hz tone
     // has too few zero crossings to tell it from 300.
     let windows: Vec<(f32, f32)> = (0..left.len() / win).map(|i| {

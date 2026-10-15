@@ -95,7 +95,7 @@ impl Scaler {
             for row in 0..dh {
                 let line = &uv.data[row * uv.stride..row * uv.stride + dw * 2];
                 let at = (r.dst.1 as usize + row) * stride + r.dst.0 as usize;
-                for (i, pair) in line.chunks_exact(2).enumerate() {
+                for (i, pair) in line.as_chunks::<2>().0.iter().enumerate() {
                     u_out[at + i] = pair[0];
                     v_out[at + i] = pair[1];
                 }
@@ -111,7 +111,7 @@ impl Scaler {
         for row in 0..dh {
             let line = &uv_dst[row * dw * 2..(row + 1) * dw * 2];
             let at = (r.dst.1 as usize + row) * stride + r.dst.0 as usize;
-            for (i, pair) in line.chunks_exact(2).enumerate() {
+            for (i, pair) in line.as_chunks::<2>().0.iter().enumerate() {
                 u_out[at + i] = pair[0];
                 v_out[at + i] = pair[1];
             }

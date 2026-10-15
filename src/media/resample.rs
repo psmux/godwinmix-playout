@@ -35,7 +35,7 @@ impl Resampler {
             return;
         };
         self.frames_in += (input.len() / 2) as u64;
-        for f in input.chunks_exact(2) {
+        for f in input.as_chunks::<2>().0 {
             self.held[0].push(f[0]);
             self.held[1].push(f[1]);
         }
@@ -81,9 +81,9 @@ impl Resampler {
 fn interleave(wave: &[Vec<f32>], drop: &mut usize, out: &mut Vec<f32>) {
     let skip = (*drop).min(wave[0].len());
     *drop -= skip;
-    for i in skip..wave[0].len() {
-        out.push(wave[0][i]);
-        out.push(wave[1][i]);
+    for (l, r) in wave[0].iter().zip(&wave[1]).skip(skip) {
+        out.push(*l);
+        out.push(*r);
     }
 }
 

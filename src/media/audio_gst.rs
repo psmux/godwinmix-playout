@@ -79,7 +79,7 @@ impl GstAudio {
             .and_then(|c| c.structure(0).and_then(|s| s.get::<i32>("channels").ok()))
             .map_or(self.channels, |c| c.max(1) as usize);
         let Some(map) = sample.buffer().and_then(|b| b.map_readable().ok()) else { return };
-        let floats = map.chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / 32768.0);
+        let floats = map.as_chunks::<2>().0.iter().map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / 32768.0);
         if channels == 1 {
             out.extend(floats.flat_map(|s| [s, s]));
         } else {
