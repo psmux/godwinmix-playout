@@ -59,7 +59,7 @@ jobs:
       - name: GStreamer (Intel Mac)
         if: matrix.platform == 'macos-x86_64'
         timeout-minutes: 30
-        run: ./ci/install-gstreamer-macos.sh
+        run: bash ci/install-gstreamer-macos.sh
       - name: GStreamer (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -70,7 +70,7 @@ jobs:
         run: cargo test --release --locked --workspace
       - name: Package
         shell: bash
-        run: dev/package.sh ${{ matrix.platform }} target/release dist
+        run: bash dev/package.sh ${{ matrix.platform }} target/release dist
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}

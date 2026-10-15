@@ -134,8 +134,6 @@ impl Engine {
     }
 
     pub(super) fn title_of(&self, id: &str) -> String {
-        self.settings.items.iter().find(|i| i.id == id).map_or_else(|| id.to_string(), |i| {
-            if i.title.is_empty() { i.path.clone() } else { i.title.clone() }
-        })
+        crate::tools::title(&self.settings, id)
     }
 }
