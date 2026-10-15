@@ -1,0 +1,104 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 22.04 rather than the newest, so the binaries run on a glibc as
+          # old as 2.35: Ubuntu 22.04, Debian 12, Raspberry Pi OS bookworm.
+          - { os: ubuntu-22.04, platform: linux-x86_64 }
+          - { os: ubuntu-22.04-arm, platform: linux-aarch64 }
+          - { os: macos-latest, platform: macos-aarch64 }
+          - { os: macos-15-intel, platform: macos-x86_64 }
+          - { os: windows-latest, platform: windows-x86_64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.platform }}
+      - name: The tag matches the manifest and the crate
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          manifest=$(sed -n 's/^version = "\(.*\)"/\1/p' gmx-plugin.toml | head -1)
+          crate=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          if [ "$want" != "$manifest" ] || [ "$want" != "$crate" ]; then
+            echo "tag $GITHUB_REF_NAME says $want, gmx-plugin.toml says $manifest, Cargo.toml says $crate. Make them agree and tag again."
+            exit 1
+          fi
+      - name: GStreamer (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+      - name: GStreamer (Apple silicon)
+        if: matrix.platform == 'macos-aarch64'
+        run: |
+          brew install gstreamer
+          echo "PKG_CONFIG_PATH=$(brew --prefix gstreamer)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig" >> "$GITHUB_ENV"
+      # Homebrew has dropped Intel Macs: GStreamer's own universal packages,
+      # from the GodwinMix CI mirror first. See the script.
+      - name: GStreamer (Intel Mac)
+        if: matrix.platform == 'macos-x86_64'
+        timeout-minutes: 30
+        run: ./ci/install-gstreamer-macos.sh
+      - name: GStreamer (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./ci/install-gstreamer-windows.ps1
+      - name: Build
+        run: cargo build --release --locked --workspace
+      - name: Test
+        run: cargo test --release --locked --workspace
+      - name: Package
+        shell: bash
+        run: dev/package.sh ${{ matrix.platform }} target/release dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Every archive holds the manifest at playout/
+        run: |
+          ls -la dist
+          for f in dist/*.tar.gz; do tar -tzf "$f" | grep -qx 'playout/gmx-plugin.toml'; tar -tvzf "$f" playout/bin/playout | grep -q '^-rwx'; done
+          for f in dist/*.zip; do unzip -l "$f" | grep -q 'playout/gmx-plugin.toml'; done
+          [ "$(ls dist | wc -l)" = 5 ]
+          (cd dist && sha256sum * > SHA256SUMS)
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          notes=$(awk -v v="## ${tag#v}" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md)
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+          else
+            gh release create "$tag" dist/* --title "Playout ${tag#v}" --notes "$notes"
+          fi

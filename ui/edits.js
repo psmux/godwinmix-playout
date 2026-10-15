@@ -12,7 +12,8 @@ export class Model extends Poller {
 
   wire(it) {
     const out = { id: it.id, path: it.path };
-    const title = this.custom.has(it.id) ? this.custom.get(it.id) : it.title;
+    // `title_set` is what the params hold; `title` falls back to the file name.
+    const title = this.custom.has(it.id) ? this.custom.get(it.id) : (it.title_set ?? it.title);
     if (title && title !== basename(it.path)) out.title = title;
     for (const k of ["in_ms", "out_ms", "still_ms"]) if (it[k] > 0) out[k] = Math.round(it[k]);
     if (it.hold) out.hold = true;

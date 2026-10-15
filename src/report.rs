@@ -24,8 +24,13 @@ pub fn item_ms(item: &Item, settings: &Settings, catalog: &Catalog) -> Option<u6
     Some(end.saturating_sub(item.in_ms))
 }
 
-pub fn state(settings: &Settings, snap: &Snapshot, catalog: &Catalog) -> Value {
+/// `items_since` is the `items_version` of an earlier answer. When nothing in
+/// the list has changed since, `items` is left out and `items_unchanged` is
+/// true, which keeps a panel polling a long list cheap.
+pub fn state(settings: &Settings, snap: &Snapshot, catalog: &Catalog, items_since: Option<u64>) -> Value {
     let items: Vec<Value> = settings.items.iter().map(|i| item(i, settings, snap, catalog)).collect();
+    let version = fnv(serde_json::to_string(&items).unwrap_or_default().as_bytes());
+    let unchanged = items_since == Some(version);
     let total: u64 = settings.items.iter().filter_map(|i| item_ms(i, settings, catalog)).sum();
     let unknown = settings.items.iter().filter(|i| catalog.probe(&i.path).is_none()).count();
     let remaining_item = snap.length_ms.map(|l| l.saturating_sub(snap.position_ms));
@@ -42,7 +47,9 @@ pub fn state(settings: &Settings, snap: &Snapshot, catalog: &Catalog) -> Value {
         "next_ready": snap.next_ready,
         "cued": snap.cued.clone(),
         "order": snap.order.clone(),
-        "items": items,
+        "items": if unchanged { Value::Null } else { Value::Array(items) },
+        "items_version": version,
+        "items_unchanged": unchanged,
         "list": {
             "count": settings.items.len(),
             "total_ms": total,
@@ -53,6 +60,8 @@ pub fn state(settings: &Settings, snap: &Snapshot, catalog: &Catalog) -> Value {
         "shuffle": settings.shuffle,
         "at_end": settings.at_end,
         "fit": settings.fit,
+        "still_seconds": settings.still_seconds,
+        "autoplay": settings.autoplay,
         "frames": snap.frames,
         "repeated_frames": snap.repeats,
         "changes": snap.changes,
@@ -72,6 +81,7 @@ fn item(i: &Item, settings: &Settings, snap: &Snapshot, catalog: &Catalog) -> Va
     json!({
         "id": i.id,
         "title": title,
+        "title_set": i.title,
         "path": i.path,
         "kind": probe.as_ref().map(|p| p.kind.clone()),
         "length_ms": item_ms(i, settings, catalog),
@@ -105,4 +115,10 @@ fn list_remaining(settings: &Settings, snap: &Snapshot, catalog: &Catalog, curre
         }
     }
     Some(left)
+}
+
+/// FNV-1a over 64 bits: stable, and plenty to tell one list from another.
+fn fnv(bytes: &[u8]) -> u64 {
+    // Kept to 53 bits so a JavaScript number holds it exactly.
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325u64, |h, b| (h ^ *b as u64).wrapping_mul(0x0000_0100_0000_01b3)) & ((1 << 53) - 1)
 }

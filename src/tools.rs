@@ -25,7 +25,7 @@ pub fn call(p: &mut Playout, params: Value) -> Result<Value, RpcError> {
     let name = params.get("name").and_then(Value::as_str).unwrap_or_default().to_string();
     let args = params.get("arguments").cloned().unwrap_or(Value::Null);
     let structured = match name.as_str() {
-        "state" => state_of(p),
+        "state" => state_of(p, args.get("items_since").and_then(Value::as_u64)),
         "thumbnail" => thumbnail(p, &args)?,
         "play" => command(p, Cmd::Play, "playing")?,
         "pause" => command(p, Cmd::Pause, "paused")?,
@@ -61,10 +61,10 @@ pub fn call(p: &mut Playout, params: Value) -> Result<Value, RpcError> {
     Ok(json!({"content": [{"type": "text", "text": text}], "structuredContent": structured}))
 }
 
-fn state_of(p: &Playout) -> Value {
+fn state_of(p: &Playout, items_since: Option<u64>) -> Value {
     let snap = state::read(&p.snapshot);
     match p.catalog.as_ref() {
-        Some(c) => crate::report::state(&p.settings, &snap, c),
+        Some(c) => crate::report::state(&p.settings, &snap, c, items_since),
         None => json!({"mode": "idle", "items": []}),
     }
 }

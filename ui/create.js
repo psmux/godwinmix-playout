@@ -30,12 +30,20 @@ function select(label, value, choices, onPick) {
   return h("label.po-field", {}, [h("span", { text: label }), sel]);
 }
 
+function seconds(value, onPick) {
+  const input = h("input", { type: "number", min: "0.5", max: "86400", step: "0.5", value: String(value) });
+  input.addEventListener("change", () => { const v = Number(input.value); if (v >= 0.5) onPick(v); });
+  return h("label.po-field", {}, [h("span", { text: "Picture time, seconds" }), input, h("small.faint", { text: "How long a picture stays up when its item does not say." })]);
+}
+
 export function openOptions(model) {
   const { body, foot, close } = openDialog("Playlist options");
   const st = model.st || {};
   body.append(
     select("When the list ends", st.at_end || "black", [["black", "Go to black"], ["hold", "Hold the last picture"]], (v) => model.setOption("at_end", v)),
     select("Fit pictures and video", st.fit || "fit", [["fit", "Fit inside the frame"], ["fill", "Fill the frame and crop"], ["stretch", "Stretch to the frame"]], (v) => model.setOption("fit", v)),
+    seconds(st.still_seconds ?? 10, (v) => model.setOption("still_seconds", v)),
+    select("When the source starts", st.autoplay === false ? "wait" : "play", [["play", "Start playing"], ["wait", "Wait for play"]], (v) => model.setOption("autoplay", v === "play")),
   );
   foot.append(h("button.po-btn.primary", { text: "Done", onclick: close }));
 }

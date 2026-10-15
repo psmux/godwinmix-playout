@@ -55,7 +55,9 @@ export class Poller {
     const sent = performance.now();
     const gen = this.writes;
     try {
-      const st = await this.tool("state");
+      const since = this.st && this.st.items_version;
+      const st = await this.tool("state", since != null ? { items_since: since } : {});
+      if (st.items_unchanged && this.st) st.items = this.st.items;
       if (gen === this.writes && !this.inflight) this.accept(st, (sent + performance.now()) / 2);
       this.error = "";
     } catch (e) {

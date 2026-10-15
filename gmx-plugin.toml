@@ -33,7 +33,7 @@ panel = { kind = "custom-element", entry = "ui/panel.js", slots = ["sidebar", "m
 [[tools]]
 name = "state"
 description = "Everything about one playlist source now: whether it is playing, the item on air with its position and time left, what plays next, the cue, every item with its length and any reason it will not play, and the time to the end of the list. Use before changing anything, and to answer what is on or how long is left. Example: state {\"source\": \"lobby\"} returns {mode: 'playing', current: {id: 'intro', position_ms: 4200, remaining_ms: 25800}, next: 'promo', list: {count: 12, remaining_ms: 1834000}, items: [...]}."
-input = "schemas/tools/source_only.json"
+input = "schemas/tools/state.json"
 annotations = { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false }
 
 [[tools]]

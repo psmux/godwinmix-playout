@@ -1,0 +1,29 @@
+# One conversation with the core, replayed with no core, no sockets and no
+# media files: an empty playlist starts, answers health and state, takes a
+# list through configure, refuses a tool it does not have and an item it does
+# not hold, stops and shuts down. `core` lines go to the plugin's stdin;
+# `plugin` lines must appear on its stderr in this order, as a subset of the
+# real line. "*" matches any value.
+#
+# Replay it with `cargo test --test offline`, or `gmx plugin test --offline`.
+{"plugin": {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"plugin": "playout", "api": 1, "transports": ["container"]}}}
+{"core": {"jsonrpc": "2.0", "id": 0, "result": {"core": "godwinmix", "version": "0.3.13", "api_level": 1, "api_compatible": 1, "canvas": {"width": 160, "height": 90, "fps": 30}, "transport": "container", "media": "", "instance": "test", "provide": "playlist", "params": {"items": []}}}}
+{"plugin": {"jsonrpc": "2.0", "method": "initialized"}}
+{"core": {"jsonrpc": "2.0", "id": 1, "method": "start", "params": {"canvas": {"width": 160, "height": 90, "fps": 30}, "transport": "container", "media": ""}}}
+{"plugin": {"jsonrpc": "2.0", "id": 1, "result": {"latency_ms": 0}}}
+{"core": {"jsonrpc": "2.0", "id": 2, "method": "health", "params": {}}}
+{"plugin": {"jsonrpc": "2.0", "id": 2, "result": {"state": "ok"}}}
+{"core": {"jsonrpc": "2.0", "id": 3, "method": "tool.call", "params": {"name": "state", "arguments": {}}}}
+{"plugin": {"jsonrpc": "2.0", "id": 3, "result": {"structuredContent": {"mode": "idle", "loop": "all", "shuffle": false, "items": []}}}}
+{"core": {"jsonrpc": "2.0", "id": 4, "method": "configure", "params": {"params": {"items": [{"id": "gone", "path": "no/such/file.mp4"}], "loop": "off", "shuffle": true}}}}
+{"plugin": {"jsonrpc": "2.0", "id": 4, "result": {"applied": true}}}
+{"core": {"jsonrpc": "2.0", "id": 5, "method": "tool.call", "params": {"name": "play_item", "arguments": {"id": "nope"}}}}
+{"plugin": {"jsonrpc": "2.0", "id": 5, "error": {"code": -32602, "message": "*"}}}
+{"core": {"jsonrpc": "2.0", "id": 6, "method": "tool.call", "params": {"name": "teleport", "arguments": {}}}}
+{"plugin": {"jsonrpc": "2.0", "id": 6, "error": {"code": -32601, "message": "*"}}}
+{"core": {"jsonrpc": "2.0", "id": 7, "method": "tool.call", "params": {"name": "pause", "arguments": {}}}}
+{"plugin": {"jsonrpc": "2.0", "id": 7, "result": {"structuredContent": {"said": "paused"}}}}
+{"core": {"jsonrpc": "2.0", "id": 8, "method": "stop", "params": {}}}
+{"plugin": {"jsonrpc": "2.0", "id": 8, "result": {}}}
+{"core": {"jsonrpc": "2.0", "id": 9, "method": "shutdown", "params": {"reason": "offline test"}}}
+{"plugin": {"jsonrpc": "2.0", "id": 9, "result": {}}}
