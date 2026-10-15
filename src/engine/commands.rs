@@ -67,6 +67,14 @@ impl Engine {
         self.errors.clear();
         self.failures_in_row = 0;
         self.settings = s;
+        // The item on air takes a new hold or picture time at once; a new in
+        // or out point waits for its next play.
+        if let Some(c) = self.current.as_mut() {
+            if let Some(item) = self.settings.items.iter().find(|i| i.id == c.player.id) {
+                c.player.hold = item.hold;
+                c.player.still_ns = self.settings.still_ns(item);
+            }
+        }
         self.drop_stale_next();
         if self.gave_up && !self.settings.items.is_empty() {
             self.gave_up = false;

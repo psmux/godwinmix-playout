@@ -43,6 +43,8 @@ pub struct ItemPlayer {
     /// How long a picture stays up.
     pub still_ns: u64,
     pub hold: bool,
+    /// The item as it was when this was opened, to tell when it changed.
+    pub item: Item,
     shared: Arc<Shared>,
     frames: Receiver<Frame>,
     ahead: Option<Frame>,
@@ -75,6 +77,7 @@ impl ItemPlayer {
             out_ns,
             still_ns: settings.still_ns(item),
             hold: item.hold,
+            item: item.clone(),
             shared,
             frames,
             ahead: None,
