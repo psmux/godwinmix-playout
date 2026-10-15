@@ -1,0 +1,16 @@
+[package]
+name = "playout-launch"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Finds GStreamer for the playout engine on macOS and Linux and starts it"
+license = "Apache-2.0"
+publish = false
+
+[[bin]]
+name = "playout"
+path = "src/main.rs"
+
+# Nothing. This binary must start on a machine where GStreamer is not where the
+# engine was linked against, so it links nothing but the standard library.
+[dependencies]
