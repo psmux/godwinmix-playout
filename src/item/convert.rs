@@ -53,8 +53,11 @@ impl Converter {
                 }
             }
         }
+        // The last frame lasts as long as the one before it did.
         if let Some((pts, held)) = self.held.take() {
-            self.send(pts, &held);
+            if self.shown(pts, pts + self.step.unwrap_or(1_000_000_000)) {
+                self.send(pts, &held);
+            }
         }
         if self.last.is_none() && !self.shared.stop.load(Ordering::Relaxed) {
             self.shared.status.fail(format!(
@@ -76,6 +79,7 @@ impl Converter {
     /// frames of the canvas rate.
     fn shown(&self, pts: u64, next: u64) -> bool {
         let start = self.shared.start_ns;
+        let (pts, next) = (pts.saturating_sub(super::SLACK_NS), next.saturating_sub(super::SLACK_NS));
         if next <= start {
             return false;
         }

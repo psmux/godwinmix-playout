@@ -89,6 +89,19 @@ impl Scaler {
     /// NV12's interleaved chroma: scaled as pairs, then split.
     fn interleaved(&mut self, uv: Plane, u_out: &mut [u8], v_out: &mut [u8], size: (u32, u32), r: place::Rects) -> Res<()> {
         let (dw, dh) = (r.dst.2 as usize, r.dst.3 as usize);
+        if r.is_copy(uv.width, uv.height) {
+            // Same size: split the pairs straight into place, no resizer.
+            let stride = size.0 as usize;
+            for row in 0..dh {
+                let line = &uv.data[row * uv.stride..row * uv.stride + dw * 2];
+                let at = (r.dst.1 as usize + row) * stride + r.dst.0 as usize;
+                for (i, pair) in line.chunks_exact(2).enumerate() {
+                    u_out[at + i] = pair[0];
+                    v_out[at + i] = pair[1];
+                }
+            }
+            return Ok(());
+        }
         self.uv.resize(dw * dh * 2, 128);
         let mut uv_dst = std::mem::take(&mut self.uv);
         let whole = place::Rects { src: r.src, dst: (0, 0, r.dst.2, r.dst.3) };

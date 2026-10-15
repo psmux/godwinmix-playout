@@ -23,6 +23,23 @@ def engine():
     sys.exit("build the engine first: cargo build --release")
 
 
+def cpu_seconds(proc):
+    """User plus kernel time of a running child, in seconds."""
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+        k = ctypes.windll.kernel32
+        h = k.OpenProcess(0x1000, False, proc.pid)
+        times = [wintypes.FILETIME() for _ in range(4)]
+        k.GetProcessTimes(h, *[ctypes.byref(t) for t in times])
+        k.CloseHandle(h)
+        as_s = lambda t: ((t.dwHighDateTime << 32) | t.dwLowDateTime) / 1e7
+        return as_s(times[2]) + as_s(times[3])
+    with open("/proc/%d/stat" % proc.pid) as f:
+        fields = f.read().rsplit(")", 1)[1].split()
+    return (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="+")
@@ -52,8 +69,13 @@ def main():
           "params": {"items": items, "loop": a.loop}}})
     send({"jsonrpc": "2.0", "id": 1, "method": "start", "params": {"canvas": canvas, "transport": "container", "media": ""}})
     started = time.time()
+    # The first five seconds include opening the first file; measure after.
+    time.sleep(min(5, a.seconds / 3))
+    t0, c0 = time.time(), cpu_seconds(p)
     while time.time() - started < a.seconds:
         time.sleep(0.5)
+    t1, c1 = time.time(), cpu_seconds(p)
+    print("cpu: %.1f%% of one core over %.1f s" % ((c1 - c0) / (t1 - t0) * 100, t1 - t0))
     send({"jsonrpc": "2.0", "id": 2, "method": "tool.call", "params": {"name": "state", "arguments": {}}})
     time.sleep(0.3)
     send({"jsonrpc": "2.0", "id": 3, "method": "stop", "params": {}})
@@ -63,7 +85,7 @@ def main():
     out.close()
     for l in lines:
         if '"log"' in l or '"id":2' in l:
-            print(l[:300])
+            print(l)
     print("wrote", a.out, os.path.getsize(a.out), "bytes")
 
 

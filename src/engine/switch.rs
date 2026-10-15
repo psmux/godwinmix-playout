@@ -73,8 +73,8 @@ impl Engine {
     fn become_current(&mut self, p: Prepared) {
         self.queue.advance(&p.player.id, p.wraps);
         let queued_ms = p.player.audio().frames() as u64 * 1000 / 48_000;
-        let waited = self.waited;
-        self.log(format!("now playing {} ({queued_ms} ms of sound ready, waited {waited} ticks)", self.title_of(&p.player.id)));
+        let left = self.current.as_ref().map(|c| (c.ticks, c.player.audio().frames(), c.player.status().video_done));
+        self.log(format!("now playing {} ({queued_ms} ms of sound ready; the item before ended after {left:?} ticks, frames of sound left, done)", self.title_of(&p.player.id)));
         self.current = Some(Current { player: p.player, ticks: 0 });
         self.failures_in_row = 0;
         self.changes += 1;

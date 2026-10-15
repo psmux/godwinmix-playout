@@ -30,6 +30,13 @@ pub struct Frame {
     pub data: Arc<Vec<u8>>,
 }
 
+/// How early a frame may be and still count as due. Matroska keeps times to
+/// the millisecond, so a 30 fps frame due at 66.667 ms is stamped 67 ms; with
+/// no slack it would miss its tick, go out a tick late, and the frame after it
+/// would be skipped. One millisecond is far below anything a viewer sees and
+/// above any container's rounding.
+pub const SLACK_NS: u64 = 1_000_000;
+
 /// Pictures drawn ahead of the output. Four frames at 1080p is 12 MB.
 const AHEAD: usize = 4;
 
@@ -157,7 +164,7 @@ impl ItemPlayer {
     pub fn frame_at(&mut self, item_ns: u64) -> Option<Frame> {
         let mut chosen = None;
         while let Some(f) = self.peek() {
-            if f.pts > item_ns && (self.shown_any || chosen.is_some()) {
+            if f.pts > item_ns + SLACK_NS && (self.shown_any || chosen.is_some()) {
                 break;
             }
             if let Some(skipped) = std::mem::replace(&mut chosen, self.ahead.take()) {
@@ -190,7 +197,7 @@ impl ItemPlayer {
             Some(Media::Video) => {
                 let s = self.status();
                 let last = s.last_pts.unwrap_or(0) + s.frame_ns.unwrap_or(0);
-                s.video_done && self.peek().is_none() && item_ns + 1 >= last.max(self.start_ns)
+                s.video_done && item_ns + SLACK_NS >= last.max(self.start_ns)
             }
         }
     }
