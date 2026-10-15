@@ -45,6 +45,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
+          # The 22.04 image carries libunwind-14-dev, which conflicts with the
+          # libunwind-dev that libgstreamer1.0-dev depends on.
+          sudo apt-get remove -y libunwind-14-dev || true
           sudo apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
       - name: GStreamer (Apple silicon)
         if: matrix.platform == 'macos-aarch64'
