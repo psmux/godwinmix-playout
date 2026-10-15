@@ -105,7 +105,7 @@ impl Engine {
             return;
         }
         let near_end = self.current.as_ref().is_some_and(|c| {
-            let played = self.item_ns().saturating_sub(c.player.start_ns);
+            let played = self.item_ns().saturating_sub(c.player.in_ns);
             c.player.length_ns().is_none_or(|len| len.saturating_sub(played) <= PREROLL_NS)
         });
         if near_end {

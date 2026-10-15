@@ -11,7 +11,7 @@ impl ItemPlayer {
         }
         match self.media() {
             None => false,
-            Some(Media::Picture) => item_ns >= self.start_ns + self.still_ns,
+            Some(Media::Picture) => item_ns >= self.in_ns + self.still_ns,
             Some(Media::Sound) => self.shared.audio.drained(),
             Some(Media::Video) => {
                 let s = self.status();
@@ -24,14 +24,14 @@ impl ItemPlayer {
     /// How long the item runs from its start, when that is known.
     pub fn length_ns(&self) -> Option<u64> {
         let end = match self.media() {
-            Some(Media::Picture) => Some(self.start_ns + self.still_ns),
+            Some(Media::Picture) => Some(self.in_ns + self.still_ns),
             _ => self.status().duration_ns,
         };
         let end = match (end, self.out_ns) {
             (Some(e), Some(o)) => Some(e.min(o)),
             (e, o) => e.or(o),
         };
-        end.map(|e| e.saturating_sub(self.start_ns))
+        end.map(|e| e.saturating_sub(self.in_ns))
     }
 }
 

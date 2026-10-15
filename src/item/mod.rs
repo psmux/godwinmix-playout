@@ -36,6 +36,9 @@ pub enum Media {
 pub struct ItemPlayer {
     pub id: String,
     pub start_ns: u64,
+    /// The item's in point. Positions and lengths are counted from here,
+    /// so a seek does not make the item look as if it started again.
+    pub in_ns: u64,
     pub out_ns: Option<u64>,
     /// How long a picture stays up.
     pub still_ns: u64,
@@ -68,6 +71,7 @@ impl ItemPlayer {
         ItemPlayer {
             id: item.id.clone(),
             start_ns,
+            in_ns: item.in_ms * 1_000_000,
             out_ns,
             still_ns: settings.still_ns(item),
             hold: item.hold,

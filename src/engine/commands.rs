@@ -98,7 +98,7 @@ impl Engine {
     fn previous(&mut self) {
         // Within the first three seconds, the item before; after that, the
         // start of this one, the way every player does it.
-        let into = self.item_ns().saturating_sub(self.current.as_ref().map_or(0, |c| c.player.start_ns));
+        let into = self.item_ns().saturating_sub(self.current.as_ref().map_or(0, |c| c.player.in_ns));
         let id = match self.current_id() {
             Some(c) if into > 3_000_000_000 => Some(c),
             current => self.queue.before(current.as_deref()).or(current),

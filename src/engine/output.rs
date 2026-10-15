@@ -98,7 +98,7 @@ impl Engine {
     }
 
     pub(super) fn publish(&mut self) {
-        let position = self.item_ns().saturating_sub(self.current.as_ref().map_or(0, |c| c.player.start_ns));
+        let position = self.item_ns().saturating_sub(self.current.as_ref().map_or(0, |c| c.player.in_ns));
         let mut s = self.snapshot.lock().unwrap_or_else(|e| e.into_inner());
         s.mode = self.mode;
         s.current = self.current.as_ref().map(|c| c.player.id.clone());
