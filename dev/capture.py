@@ -35,9 +35,16 @@ def cpu_seconds(proc):
         k.CloseHandle(h)
         as_s = lambda t: ((t.dwHighDateTime << 32) | t.dwLowDateTime) / 1e7
         return as_s(times[2]) + as_s(times[3])
-    with open("/proc/%d/stat" % proc.pid) as f:
-        fields = f.read().rsplit(")", 1)[1].split()
-    return (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK")
+    if os.path.exists("/proc/%d/stat" % proc.pid):
+        with open("/proc/%d/stat" % proc.pid) as f:
+            fields = f.read().rsplit(")", 1)[1].split()
+        return (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK")
+    # macOS: ps says [[hh:]mm:]ss.ss of CPU time.
+    out = subprocess.run(["ps", "-o", "time=", "-p", str(proc.pid)], capture_output=True, text=True).stdout.strip()
+    secs = 0.0
+    for part in out.replace("-", ":").split(":"):
+        secs = secs * 60 + float(part or 0)
+    return secs
 
 
 def main():
